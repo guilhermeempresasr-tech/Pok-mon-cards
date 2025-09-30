@@ -1,0 +1,203 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Loja de Cartas Pokémon — Preços Inteligentes</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#ffcb05; --muted:#9aa4b2; --glass: rgba(255,255,255,0.03);
+  }
+  body{font-family: Inter, system-ui, Arial, sans-serif; margin:0; background:linear-gradient(180deg,#071022 0%,#081428 60%); color:#e6eef8;}
+  header{padding:28px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid rgba(255,255,255,0.03)}
+  header h1{margin:0; font-size:20px; letter-spacing:0.4px}
+  .container{max-width:1100px; margin:28px auto; padding:0 16px;}
+  .controls{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; align-items:center;}
+  select,input[type="search"]{padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:var(--glass); color:inherit;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.03);}
+  .thumb{height:140px; border-radius:8px; background:linear-gradient(90deg,#09203a,#1f2b3c); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--muted); margin-bottom:10px}
+  .meta{display:flex; justify-content:space-between; align-items:center; gap:8px}
+  .meta .title{font-weight:700}
+  .rarity{padding:6px 8px; border-radius:8px; font-size:12px; background:rgba(0,0,0,0.25);}
+  .price{font-weight:800; font-size:18px; color:var(--accent)}
+  .explain{font-size:12px; color:var(--muted); margin-top:8px}
+  footer{padding:18px; text-align:center; color:var(--muted); font-size:13px}
+  .badge{font-size:11px; padding:4px 6px; border-radius:6px; background:rgba(255,255,255,0.02);}
+  .controls .range{display:flex; align-items:center; gap:6px}
+  .btn{background:var(--accent); color:#071022; padding:8px 10px; border-radius:8px; border:none; cursor:pointer; font-weight:700}
+  @media (max-width:520px){ .thumb{height:110px} header h1{font-size:16px} }
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect rx='8' width='40' height='40' fill='%23ffcb05'/><text x='50%' y='57%' dominant-baseline='middle' text-anchor='middle' font-size='18' font-family='Arial' fill='%23071422' font-weight='700'>P</text></svg>" alt="logo" style="width:44px;height:44px;border-radius:10px;">
+  <h1>Loja de Cartas Pokémon — Preços por qualidade e raridade</h1>
+</header>
+
+<main class="container">
+  <div class="controls">
+    <input id="search" type="search" placeholder="Buscar por nome (ex: Charizard)">
+    <select id="rarityFilter">
+      <option value="all">Todas as raridades</option>
+      <option>Common</option>
+      <option>Uncommon</option>
+      <option>Rare</option>
+      <option>Ultra Rare</option>
+      <option>Secret Rare</option>
+      <option>Promo</option>
+    </select>
+    <select id="conditionFilter">
+      <option value="all">Todas as condições</option>
+      <option>Mint</option>
+      <option>Near Mint</option>
+      <option>Excellent</option>
+      <option>Good</option>
+      <option>Poor</option>
+    </select>
+    <select id="sort">
+      <option value="recommended">Ordenar: Recomendado</option>
+      <option value="price-asc">Preço ↑</option>
+      <option value="price-desc">Preço ↓</option>
+      <option value="rarity">Raridade</option>
+    </select>
+    <div style="flex:1"></div>
+    <button class="btn" id="downloadCSV">Baixar CSV</button>
+  </div>
+
+  <section id="explanation" style="margin-bottom:12px; color:var(--muted); font-size:13px;">
+    <strong>Como calculamos o preço sugerido:</strong> cada raridade tem um preço-base e cada condição aplica um multiplicador. Holo/foil e cartas populares recebem multiplicadores extras. Você pode ajustar filtros e ordenar. (Veja detalhes ao abrir uma carta)
+  </section>
+
+  <section id="list" class="grid"></section>
+</main>
+
+<footer>Gerado automaticamente — algoritmo de sugestão visível para cada carta. (Ex.: base * condição * holo * popularidade)</footer>
+
+<script>
+// Dados de exemplo — substitua por dados reais do seu inventário
+const cards = [
+  {id:1, name:"Charizard VMAX", rarity:"Secret Rare", condition:"Near Mint", holo:true, popularity:0.95, comments:"Edição recente, muito procurada."},
+  {id:2, name:"Pikachu Illustrator (Replica)", rarity:"Promo", condition:"Good", holo:true, popularity:0.6, comments:"Replica — não é original."},
+  {id:3, name:"Gyarados", rarity:"Rare", condition:"Excellent", holo:false, popularity:0.4, comments:"Boas condições gerais."},
+  {id:4, name:"Bulbasaur", rarity:"Common", condition:"Mint", holo:false, popularity:0.15, comments:"Cartinha comum."},
+  {id:5, name:"Mewtwo EX", rarity:"Ultra Rare", condition:"Near Mint", holo:true, popularity:0.7, comments:"Alta demanda em decks."},
+  {id:6, name:"Dragonite Holo", rarity:"Rare", condition:"Good", holo:true, popularity:0.55, comments:"Holo visível."},
+  {id:7, name:"Umbreon GX", rarity:"Ultra Rare", condition:"Excellent", holo:true, popularity:0.65, comments:"Popular entre colecionadores."},
+  {id:8, name:"Magikarp", rarity:"Common", condition:"Poor", holo:false, popularity:0.05, comments:"Muito desgastada."},
+  {id:9, name:"Charizard Holo (1st Ed)", rarity:"Secret Rare", condition:"Excellent", holo:true, popularity:0.99, comments:"Exemplar antigo, muito procurado."},
+  {id:10, name:"Eevee", rarity:"Uncommon", condition:"Mint", holo:false, popularity:0.25, comments:"Versátil e procurado."}
+];
+
+// Preços base por raridade (valores em R$ - apenas como referência)
+const baseByRarity = {
+  "Common": 5,
+  "Uncommon": 15,
+  "Rare": 50,
+  "Ultra Rare": 200,
+  "Secret Rare": 600,
+  "Promo": 100
+};
+
+// Multiplicadores por condição
+const conditionMultiplier = {
+  "Mint": 1.0,
+  "Near Mint": 0.85,
+  "Excellent": 0.65,
+  "Good": 0.45,
+  "Poor": 0.2
+};
+
+function computePrice(card){
+  const base = baseByRarity[card.rarity] ?? 20;
+  const cond = conditionMultiplier[card.condition] ?? 0.5;
+  const holoMult = card.holo ? 1.25 : 1.0; // holo aumenta valor
+  // popularidade entre 0 e 1, transformamos em fator entre 0.9 e 1.3
+  const popMult = 0.9 + (card.popularity || 0.2) * 0.44;
+  // small randomization to avoid exact matches (simulate market)
+  const rnd = 0.95 + (Math.sin(card.id * 999) * 0.03 + 0.03);
+  const price = Math.max(1, Math.round(base * cond * holoMult * popMult * rnd));
+  return {price, breakdown:{base,cond,holoMult,popMult, rnd: Number(rnd.toFixed(3))}};
+}
+
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const rarity = document.getElementById('rarityFilter').value;
+  const condition = document.getElementById('conditionFilter').value;
+  const sort = document.getElementById('sort').value;
+
+  let filtered = cards.filter(c=>{
+    if(rarity !== 'all' && c.rarity !== rarity) return false;
+    if(condition !== 'all' && c.condition !== condition) return false;
+    if(q && !c.name.toLowerCase().includes(q)) return false;
+    return true;
+  }).map(c=> ({...c, computed: computePrice(c)}));
+
+  if(sort === 'price-asc') filtered.sort((a,b)=>a.computed.price - b.computed.price);
+  else if(sort === 'price-desc') filtered.sort((a,b)=>b.computed.price - a.computed.price);
+  else if(sort === 'rarity') {
+    const rank = {"Common":1,"Uncommon":2,"Rare":3,"Ultra Rare":4,"Secret Rare":5,"Promo":3};
+    filtered.sort((a,b)=> (rank[b.rarity]||0) - (rank[a.rarity]||0) );
+  } else { // recommended: sort by popularity * price
+    filtered.sort((a,b)=> (b.popularity * b.computed.price) - (a.popularity * a.computed.price));
+  }
+
+  for(const c of filtered){
+    const div = document.createElement('div'); div.className='card';
+    div.innerHTML = `
+      <div class="thumb">${c.name.split(' ').slice(0,2).join(' ')}</div>
+      <div class="meta">
+        <div>
+          <div class="title">${c.name}</div>
+          <div style="margin-top:6px"><span class="badge">${c.condition}</span> <span class="rarity">${c.rarity}${c.holo? ' • Holo':''}</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="price">R$ ${c.computed.price}</div>
+          <div style="font-size:12px;color:var(--muted)">${Math.round(c.popularity*100)}% popular</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Detalhes do cálculo:</strong><br>
+        Base R$ ${c.computed.breakdown.base} × condição ${c.computed.breakdown.cond} × holo ${c.computed.breakdown.holoMult} × popularidade ${c.computed.breakdown.popMult.toFixed(2)} × rnd ${c.computed.breakdown.rnd} = <strong>R$ ${c.computed.price}</strong>
+        <div style="margin-top:6px;color:var(--muted)">${c.comments}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
+  if(filtered.length === 0){
+    list.innerHTML = '<div style="color:var(--muted)">Nenhuma carta encontrada com esses filtros.</div>';
+  }
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('rarityFilter').addEventListener('change', render);
+document.getElementById('conditionFilter').addEventListener('change', render);
+document.getElementById('sort').addEventListener('change', render);
+
+document.getElementById('downloadCSV').addEventListener('click', ()=>{
+  const rows = [["id","name","rarity","condition","holo","popularity","suggested_price","comments"]];
+  const current = Array.from(document.querySelectorAll('#list .card')).map((el, idx)=>{
+    const c = cards[idx]; // not perfect mapping but demo uses full list in CSV
+    return c;
+  });
+  // We'll export full inventory for simplicity
+  for(const c of cards){
+    const p = computePrice(c).price;
+    rows.push([c.id, c.name, c.rarity, c.condition, c.holo ? 'yes':'no', c.popularity, p, c.comments]);
+  }
+  const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'inventory_suggested_prices.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>
